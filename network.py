@@ -1,0 +1,47 @@
+import socket
+import selectors
+
+class ClientManager():
+    def __init__(self):
+        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket.setblocking(False)
+        server_address = ('0.0.0.0', 7777)
+        print('starting up on', server_address)
+        self.server_socket.bind(server_address)
+        self.server_socket.listen(5)
+
+        self.selector = selectors.DefaultSelector()
+
+        self.selector.register(self.server_socket, selectors.EVENT_READ)
+
+    def _accept_wrapper(self, sock):
+        # Accept a new connection
+        client_socket, client_address = sock.accept()
+        print('connection from', client_address)
+        client_socket.setblocking(False)
+        # Register the new client socket for monitoring read events
+        self.selector.register(client_socket, selectors.EVENT_READ, data=client_address)
+
+    def _handle_client(self, client_socket, message):
+        try:
+            client_socket.sendall(message)
+        except Exception as e:
+            print('error occurred:', e)
+            # Unregister and close the connection on error
+            self.selector.unregister(client_socket)
+            client_socket.close()
+    
+    def send(self, msg):
+        events = self.selector.select(timeout=0)  # Timeout set to 1 second
+        print(events)
+        
+        for key, mask in events:
+            if key.fileobj == self.server_socket:
+                self._accept_wrapper(key.fileobj)
+
+        for key, mask in self.selector.get_map().items():
+            if mask.data is not None:  # Check if the key has client data
+                client_socket = mask.fileobj
+                client_address = mask.data
+                self._handle_client(client_socket, bytes(msg, encoding='utf-8'))
+

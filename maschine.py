@@ -197,9 +197,14 @@ class MaschineMikroMk3:
 # MyMaschinePrinterExample custom object example
 class MyMaschinePrinterExample(MaschineMikroMk3):
 
+    def __init__(self, client_manager):
+        self.client_manager = client_manager
+        super().__init__(":3")
+
     # a pad was pushed
     def pad_pushed(self, pad_id):
         print(f"The pad {pad_id} was pushed.")
+        self.client_manager.send(f"{pad_id}")
 
     # a pad was released
     def pad_released(self, pad_id):
@@ -246,3 +251,8 @@ class MyMaschinePrinterExample(MaschineMikroMk3):
     def strip_pos_changed(self, strip_pos):
         #print(f"The strip positions changed to {strip_pos}.")
         pass
+
+from network import ClientManager
+mgr = ClientManager()
+msh = MyMaschinePrinterExample(mgr)
+msh.run()
