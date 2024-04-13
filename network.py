@@ -15,11 +15,9 @@ class ClientManager():
         self.selector.register(self.server_socket, selectors.EVENT_READ)
 
     def _accept_wrapper(self, sock):
-        # Accept a new connection
         client_socket, client_address = sock.accept()
         print('connection from', client_address)
         client_socket.setblocking(False)
-        # Register the new client socket for monitoring read events
         self.selector.register(client_socket, selectors.EVENT_READ, data=client_address)
 
     def _close_wrapper(self, client_socket):
@@ -41,7 +39,7 @@ class ClientManager():
                     self._close_wrapper(selector_key.fileobj)
 
         for _, selector_key in self.selector.get_map().items():
-            if selector_key.data is not None:  # Check if the key has client data
+            if selector_key.data is not None:
                 client_socket = selector_key.fileobj
                 self._handle_client(client_socket, bytes(msg, encoding='utf-8'))
 
