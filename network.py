@@ -4,8 +4,7 @@ import selectors
 class ClientManager():
     def __init__(self, addr=''):
         
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.setblocking(False)
+        self._init_socket()
 
         if not addr:
             addr = ('0.0.0.0', 7777)
@@ -15,17 +14,26 @@ class ClientManager():
             self.selector = selectors.DefaultSelector()
             self.selector.register(self.socket, selectors.EVENT_READ)
         else:
-            print('connecting to', addr)
-            try:
-                self.socket.connect((addr, 7777))
-            except BlockingIOError:
-                pass 
+            self.addr = addr
+            self.connected = False
+    
+    def _init_socket(self):
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.setblocking(False)
 
     def _accept_wrapper(self, sock):
         client_socket, client_address = sock.accept()
         print('connection from', client_address)
         client_socket.setblocking(False)
         self.selector.register(client_socket, selectors.EVENT_READ, data=client_address)
+
+    def _connect_wrapper(self):
+            try:
+                self.socket.connect((self.addr, 7777))
+            except BlockingIOError:
+                pass
+            except OSError:
+                pass
 
     def _close_wrapper(self, client_socket):
         self.selector.unregister(client_socket)
@@ -51,11 +59,23 @@ class ClientManager():
                 self._handle_client(client_socket, msg)
     
     def recv(self):
+        if not self.connected:
+            self._connect_wrapper()
+            self.connected = True
+        
         try:
             data = self.socket.recv(1024)
         except BlockingIOError:
             return None
+        except OSError:
+            self.connected = False
+            return None
         else:
+            if not data:
+                self.socket.close()
+                self._init_socket()
+                self.connected = False
+                return None
             return data
 
 
