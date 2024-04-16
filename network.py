@@ -1,20 +1,61 @@
 import socket
 import selectors
+import struct
 
-class ClientManager():
-    def __init__(self, addr=''):
-        
+class _UDPManager():
+
+    def __init__(self, addr)
+        self.addr = addr
+
         self._init_socket()
 
-        if not addr:
-            addr = ('0.0.0.0', 7777)
+        if mode == 'client':
+            print('listening on', addr)
+            self.socket.bind(addr)
+            mreq = struct.pack("4sl", socket.inet_aton(MCAST_GRP), socket.INADDR_ANY)
+            sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+            self.socket.listen(32)
+        else:
+            sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 4)
+
+    def _init_socket(self)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    def recv(self,):
+
+        sock.bind((,)
+
+        if not self.connected:
+            self._connect_wrapper()
+            self.connected = True
+        
+        try:
+            data = self.socket.recv(1024)
+        except BlockingIOError:
+            return None
+        except OSError:
+            self.connected = False
+            return None
+        else:
+            return data
+
+    def send(self, msg):
+        sock.sendto(msg, (MCAST_GRP, MCAST_PORT))
+
+class _TCPManager()
+
+    def __init__(self, addr, mode)
+
+        self.addr = addr
+        self._init_socket()
+
+        if mode == 'master':
             print('listening on', addr)
             self.socket.bind(addr)
             self.socket.listen(32)
             self.selector = selectors.DefaultSelector()
             self.selector.register(self.socket, selectors.EVENT_READ)
         else:
-            self.addr = addr
             self.connected = False
     
     def _init_socket(self):
@@ -29,7 +70,7 @@ class ClientManager():
 
     def _connect_wrapper(self):
             try:
-                self.socket.connect((self.addr, 7777))
+                self.socket.connect(self.addr)
             except BlockingIOError:
                 pass
             except OSError:
@@ -45,6 +86,7 @@ class ClientManager():
         except Exception as e:
             print('error occurred:', e) 
     
+    #TODO multi-threaded send?
     def send(self, msg):
         while len((events := self.selector.select(timeout=0))):
             for selector_key, _ in events:
@@ -78,4 +120,39 @@ class ClientManager():
                 return None
             return data
 
+class NetworkModeException(Exception)
 
+    def __init__(self, method, mode):
+        super().__init__("The %s method is only allowed in %s mode" % (method, mode))
+
+def require_mode(mode):
+    def decorator(func):
+        def wrapper(self, *args, **kwars):
+            if self.mode != mode:
+                raise NetworkModeException(func.__name__, mode)
+            return func(self, *args, **kwargs)
+        return wrapper
+    return decorator
+
+class Network():
+
+    def __init__(self, proto, mode, addr=None, port=7777):
+
+        if mode not in ('master', 'client'):
+            raise ValueError("mode should be one of master or client")
+
+        if proto not in ('tcp', 'udp'):
+            raise ValueError("proto should be one of tcp or udp")
+
+        self.mode = mode
+        addr = (addr if addr is not None else '0.0.0.0', 7777)
+
+        self._mgr = _TCPManager(addr, mode) if proto == 'tcp' else _UDPManager(addr, mode)
+
+    @require_mode('master')
+    def send(self, msg)
+        return self._mgr.send(send)
+
+    @require_mode('client')
+    def recv(self)
+        return self._mdr.recv()
