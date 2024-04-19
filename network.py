@@ -4,47 +4,36 @@ import struct
 
 class _UDPManager():
 
-    def __init__(self, addr)
+    def __init__(self, addr, mode):
         self.addr = addr
 
-        self._init_socket()
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
         if mode == 'client':
             print('listening on', addr)
+            self.socket.setblocking(False)
             self.socket.bind(addr)
             mreq = struct.pack("4sl", socket.inet_aton(MCAST_GRP), socket.INADDR_ANY)
             sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
             self.socket.listen(32)
         else:
-            sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 4)
+            self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 4)
 
-    def _init_socket(self)
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    def recv(self):
 
-    def recv(self,):
-
-        sock.bind((,)
-
-        if not self.connected:
-            self._connect_wrapper()
-            self.connected = True
-        
         try:
             data = self.socket.recv(1024)
         except BlockingIOError:
-            return None
-        except OSError:
-            self.connected = False
             return None
         else:
             return data
 
     def send(self, msg):
-        sock.sendto(msg, (MCAST_GRP, MCAST_PORT))
+        self.socket.sendto(msg, self.addr)
 
-class _TCPManager()
+class _TCPManager():
 
-    def __init__(self, addr, mode)
+    def __init__(self, addr, mode):
 
         self.addr = addr
         self._init_socket()
@@ -120,14 +109,14 @@ class _TCPManager()
                 return None
             return data
 
-class NetworkModeException(Exception)
+class NetworkModeException(Exception):
 
     def __init__(self, method, mode):
         super().__init__("The %s method is only allowed in %s mode" % (method, mode))
 
 def require_mode(mode):
     def decorator(func):
-        def wrapper(self, *args, **kwars):
+        def wrapper(self, *args, **kwargs):
             if self.mode != mode:
                 raise NetworkModeException(func.__name__, mode)
             return func(self, *args, **kwargs)
@@ -144,15 +133,21 @@ class Network():
         if proto not in ('tcp', 'udp'):
             raise ValueError("proto should be one of tcp or udp")
 
+        if proto == 'udp' and mode == 'master' and not addr:
+            raise ValueError("addr should be supplied in udp master mode")
+
+        if proto == 'tcp' and mode == 'client' and not addr:
+            raise ValueError("addr should be supplied in tcp client mode")
+
         self.mode = mode
         addr = (addr if addr is not None else '0.0.0.0', 7777)
 
         self._mgr = _TCPManager(addr, mode) if proto == 'tcp' else _UDPManager(addr, mode)
 
     @require_mode('master')
-    def send(self, msg)
-        return self._mgr.send(send)
+    def send(self, msg):
+        return self._mgr.send(msg)
 
     @require_mode('client')
-    def recv(self)
-        return self._mdr.recv()
+    def recv(self):
+        return self._mgr.recv()
