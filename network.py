@@ -13,8 +13,8 @@ class _UDPManager():
             print('listening on', addr)
             self.socket.setblocking(False)
             self.socket.bind(addr)
-            mreq = struct.pack("4sl", socket.inet_aton(MCAST_GRP), socket.INADDR_ANY)
-            sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+            mreq = struct.pack("4sl", socket.inet_aton(addr[0]), socket.INADDR_ANY)
+            self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
             self.socket.listen(32)
         else:
             self.socket.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 4)
